@@ -1,10 +1,12 @@
-function Settings() {
+export type SettingsConfiguration = {}
 
+class Settings {
+    public static construct(config?: SettingsConfiguration): unknown { return; }
 }
 
-namespace Settings { }
+namespace Settings {
+}
 
 export default Settings;
-(globalThis as any).Settings = Settings;
 
 // undeclared API!

@@ -56,13 +56,20 @@ More in [Todos](#Todos).
 ## Importance - High
 - Configuration / package.json
     - Is it possible to make a Package, that does not need a `server.js` as `main` and does also just export the `js` as packages, aswell as support the server as runnable? 
-- Update `.editorconfig`
-- Upload the Project to GitHub.
+    - [x] `server.js` is not the `main` anymore, therefore the Project can be a Package.
+    - [x] The Package has a single entrypoint : `index.ts/js`
+    - [x] Project now has a *build* goal.
+    - [ ] `server.js` is not needed anymore, all files are Statically readable without parent traversal.
+- [x] Update `.editorconfig`
+- [ ] GitHub
+	- [x] Upload the Project to GitHub.
+	- [ ] Add Workflows (GitHub Actions) to build the Environment and Static Files.
 ## Importance - Low
 - NodeDrawer
     - Make Worker capable!
         - Maybe add WorkSections ( Work split by section mapped onto Environments)
-    - Allow Drag Move to bind to a different keyset.
+        - *OR* make Specific Renderin parts that get auto loaded by the Worker. (somehow)
+    - Allow Drag Move to bind to a different keyset. -> Needs *Mouse Gestures*
         - For this, it might be easy to implement : EventProxy; `touch to pointerdown, move to pointermove, click to pointerdown then pointerup`
     - Hover Events ( intersection testing for cursor )
     - Collision / Rendering Issue: 
@@ -79,7 +86,6 @@ More in [Todos](#Todos).
     - *Samples*: Long Press / Short Press, Two / Three / Four Press / Pointers, swipe, Drag, Positional
 
 - Settings
-    - *description*: a TypeScript, to give a Context, 
     - Interacts with Keyboard Hotkeys
     - Interacts with MenuBuilder
     - Make the Keyboard Hotkeys and Mouse Gestures Context Dependent (AKA create a context system!)

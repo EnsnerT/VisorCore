@@ -20,7 +20,8 @@ module.exports = {
         filename: '[name].js',
         library: { 
             name: '[name]', 
-            type: 'global'
+            type: 'global',
+            export: 'default'
         },
         chunkFormat: 'array-push',
         path: path.resolve(__dirname, 'dist')
