@@ -14,7 +14,7 @@ The `NodeDrawer` library provides a flexible framework for rendering interactive
 ---
 # Usage Example
 
-```text/javascript
+```jsx
 // 1. Create a canvas element in HTML:
 <canvas id="master" width="800" height="600"></canvas> 
 

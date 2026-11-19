@@ -8,3 +8,4 @@ assets/
 .obsidian/workspace.json
 .obsidian/appearance.json
 .obsidian/templates.json
+dist/*

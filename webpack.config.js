@@ -18,9 +18,12 @@ module.exports = {
     output: {
         globalObject: 'this',
         filename: '[name].js',
-        library: { name: 'VisorCore', type: 'umd' },
-        path: path.resolve(__dirname, 'dist'),
-        chunkFormat: 'umd'
+        library: { 
+            name: '[name]', 
+            type: 'global'
+        },
+        chunkFormat: 'array-push',
+        path: path.resolve(__dirname, 'dist')
     },
     module: {
         rules: [
