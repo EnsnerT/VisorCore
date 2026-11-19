@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Time Worker</title>
+        <style>
+            body {
+                margin: 0;
+                height: 100%;
+                background: black;
+            }
+
+            #scaler {
+                height: 100dvh;
+                width: 100dvw;
+                display: flex;
+                overflow: hidden;
+                position: absolute;
+            }
+
+            #scaler canvas {
+                overflow: hidden;
+            }
+
+            .timedisplay {
+                display: flex;
+                flex-direction: column;
+                flex-wrap: nowrap;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .timedisplay [data-id=localoffset] {
+                font-size: 1.2em;
+                font-weight: 700;
+            }
+            .timedisplay [data-id=time] {
+                font-size: 4em;
+            }
+
+            .timedisplay [data-id=date] {
+                font-size: 2em;
+            }
+
+            .timedisplay [data-id=offset] {
+                font-size: 1.5em;
+                color: #333;
+            }
+
+            [data-type="1"] [data-id="to"],
+            [data-type="1"] [data-id="arrow"] {
+                display: none;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div id="scaler">
+            <canvas width="720" height="405"
+                style="object-fit:cover;object-position: center;min-height:100%;min-width: 100%;z-index: -1"></canvas>
+        </div>
+        <div style="margin:auto;display:flex;flex-direction: row; justify-content: center;height:100dvh;overflow:auto;"
+            data-type="2" id="display">
+            <div style="width: 400px;backdrop-filter: blur(16px);min-height:200px;margin:auto 0;border-radius: 16px;background:#b9b9b966;font-family: Arial;"
+                class="timedisplay" data-id="from">
+                <span data-id="localoffset"></span>
+                <span data-id="name"></span>
+                <span data-id="time"></span>
+                <span data-id="date"></span>
+                <span data-id="offset"></span>
+            </div>
+            <div style="margin: auto 40px;font-size: 8em;text-shadow: 0 0 1rem #fff;" data-id="arrow">
+                &rarr;
+            </div>
+            <div style="width: 400px;backdrop-filter: blur(16px);min-height:200px;margin:auto 0;border-radius: 16px;background:#b9b9b966;font-family: Arial;"
+                class="timedisplay" data-id="to">
+                <span data-id="localoffset"></span>
+                <span data-id="name"></span>
+                <span data-id="time"></span>
+                <span data-id="date"></span>
+                <span data-id="offset"></span>
+            </div>
+        </div>
+        <!-- <script type="text/javascript">var exports={};</script> -->
+        <script type="text/javascript" src="dist/WorkerAPI.js"></script>
+        <script type="text/javascript">
+            // "use strict";
+            // import { WorkerAPI } from "./WorkerAPI.js";
+            
+            // import * as F from './worker';
+            const externalWorker = new Worker("worker.worker.js", { type: "classic", name: "sampleworker" });
+
+            const cctx = {
+                /** @type {HTMLCanvasElement} */
+                canvas: undefined,
+                /** @type {OffscreenCanvas} */
+                offscreen: undefined,
+            }
+
+            const cache_timezones = {};
+            const cache_regions = {};
+            const default_timezone = undefined;
+
+            for (let i = 97; i <= 122; i++) {
+                for (let j = 97; j <= 122; j++) {
+                    try {
+                        const id = String.fromCharCode(i) + String.fromCharCode(j);
+                        const f = new Intl.Locale("en-" + id).getTimeZones();
+                        f.forEach(function(v){
+                            if (cache_timezones[v] === undefined)
+                                cache_timezones[v] = id;
+                            else 
+                                cache_timezones[v] = [...cache_timezones[v],id];
+                        });
+                        if (f.length)
+                            cache_regions[id] = f;
+                    } catch (e) { }
+                }
+            }
+            // console.log(cache_timezones);
+
+
+            const methods = {
+                "paint": function (instructions) {
+
+                }
+            };
+
+            function LOG(message) { }
+            function SELECT_OPTIONS(paramName, options) { }
+
+            const worker = new WorkerAPI(externalWorker, methods);
+
+            window.addEventListener("hashchange",/** @param {HashChangeEvent} event */function (event) {
+                const params = location.hash.substring(1).split("&").map(function (v) { return v.split("="); }).reduce(function (p, c) { p[c[0]] == undefined ? p[c[0]] = c[1] : undefined; return p; }, {});
+                
+                updateUI(params);
+            });
+
+            document.addEventListener("DOMContentLoaded", function () {
+                const canvas = document.body.querySelector("canvas");
+                cctx.canvas = canvas;
+
+                const bcr = document.body.getBoundingClientRect()
+
+                cctx.canvas.height = bcr.height;
+                cctx.canvas.width = bcr.width;
+                cctx.offscreen = cctx.canvas.transferControlToOffscreen();
+                // cctx.ctx = canvas.getContext("2d");
+                // cctx.octx = cctx.offscreen.getContext("2d");
+                worker.start();
+                console.log("Started Logging!")
+                worker.call("log","test")();
+                worker.call("setCanvas", cctx.offscreen)([cctx.offscreen]);
+
+                let target=location.search;
+                if (target.length < 2)
+                    target=location.hash;
+
+                const params = target.substring(1).split("&").map(function (v) { return v.split("="); }).filter(function(e){return e[0].length;}).reduce(function (p, c) { p[c[0]] == undefined ? p[c[0]] = c[1] : undefined; return p; }, {});
+                try {
+                    const f = Intl.DateTimeFormat(params.lang, { timeZone: params.tz }).format();
+                } catch (e) {
+                    params.tz = undefined;
+                }
+                try {
+                    const g = Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom }).format();
+                } catch (e) {
+                    LOG(`Parameter tzFrom (='${params.tzFrom}') is not applicable!`);
+
+                    params.tzFrom = undefined;
+                }
+
+                if (location.hash.length < 1)
+                    history.replaceState({},undefined,location.pathname+"#"+Object.entries(params).map(function(r){return r[0]+"="+r[1]}).join("&"));
+
+                /// list of Timezones: new Intl.Locale(params.lang).getTimeZones()
+
+                // const FromDateFormatter = Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, year: "numeric", month: "long", day: "2-digit" }).format;
+                // const FromTimeFormatter = Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, minute: "2-digit", second: "2-digit", hour: "numeric" }).format;
+                // const FromOffsetIntl = Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, timeZoneName: "longOffset" }).formatToParts;
+                // const FromOffset2Intl = Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, timeZoneName: "shortOffset" }).formatToParts;
+
+                // const ToDateFormatter = Intl.DateTimeFormat(params.lang, { timeZone: params.tz, year: "numeric", month: "long", day: "2-digit" }).format;
+                // const ToTimeFormatter = Intl.DateTimeFormat(params.lang, { timeZone: params.tz, minute: "2-digit", second: "2-digit", hour: "numeric" }).format;
+                // const ToOffsetIntl = Intl.DateTimeFormat(params.lang, { timeZone: params.tz, timeZoneName: "longOffset" }).formatToParts;
+                // const ToOffsetIntl2 = Intl.DateTimeFormat(params.lang, { timeZone: params.tz, timeZoneName: "shortOffset" }).formatToParts;
+
+                // const FromOffsetFormatter = function (date) { return FromOffsetIntl(date).find(function (v) { return v.type === "timeZoneName" }).value; };
+                // const ToOffsetFormatter2 = function (date) { return ToOffsetIntl2(date).find(function (v) { return v.type === "timeZoneName" }).value; };
+
+                // function renderTime() {
+                //     from_time.textContent = FromTimeFormatter();
+                //     from_date.textContent = FromDateFormatter();
+                //     from_offset.textContent = FromOffsetFormatter();
+                // }
+                // setInterval(renderTime, 500);
+                // renderTime();
+                setupTimer();
+
+                updateUI(params);
+            });
+
+            /** 
+             * @typedef {"from"|"to"} Section
+             * @typedef {"name"|"time"|"date"|"offset"|"localoffset"} Field
+             * @typedef {`${Section}_${Field}`} PerfectNames
+             * @type {{[s typeof Section, f in Field]}}
+             */
+            const PerfectNames = {
+                "from_name":["from","name"],
+                "from_time":["from","time"],
+                "from_date":["from","date"],
+                "from_offset":["from","offset"],
+                "from_localoffset":["from","localoffset"],
+                "to_name":["to","name"],
+                "to_time":["to","time"],
+                "to_date":["to","date"],
+                "to_offset":["to","offset"],
+                "to_localoffset":["to","localoffset"]
+            };
+
+            /** 
+             * @type {{elements_cache:{[k in PerfectNames]:HTML_Element},timer:number?,formatter:{[k in PerfectNames]:(when:Date|undefined)=>string}}?} */
+            let currentTimer = null;
+
+            function setupTimer() {
+                const from = document.body.querySelector("[data-id=from]");
+
+                const to = document.body.querySelector("[data-id=to]");
+
+                if (currentTimer == undefined) {
+                    currentTimer = {
+                        elements_cache: {
+                            from_name: from.querySelector("[data-id=name]"),
+                            from_time: from.querySelector("[data-id=time]"),
+                            from_date: from.querySelector("[data-id=date]"),
+                            from_offset: from.querySelector("[data-id=offset]"),
+                            from_localoffset: from.querySelector("[data-id=localoffset]"),
+                            to_name: to.querySelector("[data-id=name]"),
+                            to_time: to.querySelector("[data-id=time]"),
+                            to_date: to.querySelector("[data-id=date]"),
+                            to_offset: to.querySelector("[data-id=offset]"),
+                            to_localoffset: to.querySelector("[data-id=localoffset]"),
+                        },
+                        timer: null
+                    };
+                    // for(const name in PerfectNames){
+                        
+                    // }
+                }
+            }
+            function updateUI(params) {
+                if (typeof currentTimer.timer === "number"){
+                    clearInterval(currentTimer.timer);
+                    currentTimer.timer = undefined;
+                }
+
+                document.body.querySelector("#display").setAttribute("data-type",params.mode||"1");
+
+                console.trace(params);
+
+                /** 
+                 * @type (cb:Intl.DateTimeFormat)=>((when:Date|undefined)=>string)
+                */
+                function C(cb){
+                    return function pxy(dt){
+                        return cb.formatToParts(dt).find(function(v){return v.type === "timeZoneName"}).value;
+                    }
+                }
+
+                currentTimer.formatter = {
+                    "from_date": Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, year: "numeric", month: "long", day: "2-digit" }).format,
+                    "from_time": Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, minute: "2-digit", second: "2-digit", hour: "numeric" }).format,
+                    "from_offset": C(Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, timeZoneName: "longOffset" })), // GMT
+                    "from_localoffset": C(Intl.DateTimeFormat(params.lang, { timeZone: params.tzFrom, timeZoneName: "shortGeneric" })), // METZ / PCTS
+                    "to_date": Intl.DateTimeFormat(params.lang, { timeZone: params.tz, year: "numeric", month: "long", day: "2-digit" }).format,
+                    "to_time": Intl.DateTimeFormat(params.lang, { timeZone: params.tz, minute: "2-digit", second: "2-digit", hour: "numeric" }).format,
+                    "to_offset": C(Intl.DateTimeFormat(params.lang, { timeZone: params.tz, timeZoneName: "longOffset" })), // GMT
+                    "to_localoffset": C(Intl.DateTimeFormat(params.lang, { timeZone: params.tz, timeZoneName: "shortGeneric" })), // METZ / PCTS
+                };
+
+                renderTime();
+                currentTimer.timer = setInterval(renderTime,500);
+                return {
+                    elements_cache: currentTimer.elements_cache,
+                    timer: currentTimer.timer,
+                };
+            }
+            function renderTime(){
+
+                Object.keys(PerfectNames).forEach(function(v){
+                    if (currentTimer.elements_cache[v] != undefined && typeof currentTimer.formatter[v] === "function")
+                        currentTimer.elements_cache[v].textContent = currentTimer.formatter[v]();
+                });
+                // currentTimer.elements_cache.from_date.textContent = currentTimer.formatter.from_date.format()
+                // from_time.textContent = FromTimeFormatter();
+                // from_date.textContent = FromDateFormatter();
+                // from_offset.textContent = FromOffsetFormatter();
+            }
+
+
+
+            // let requestedFrame = undefined;
+            // const renderer = function renderer(timestamp){
+
+            //     // const h = cctx.octx.canvas.height, w = cctx.octx.canvas.width;
+
+            //     // cctx.ctx.putImageData(cctx.octx.getImageData(0,0,w,h,{pixelFormat:"rgba-unorm8"}),w,h);
+
+            //     requestedFrame = requestAnimationFrame(renderer);
+            // }
+            // requestedFrame = requestAnimationFrame(renderer)
+
+
+        </script>
+    </body>
+
+</html>

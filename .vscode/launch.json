@@ -1,0 +1,32 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Locally",
+            "request": "launch",
+            "runtimeArgs": [
+                "run",
+                "start"
+            ],
+            "runtimeExecutable": "npm",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "type": "node",
+            "serverReadyAction": {
+                "action": "openIntegratedBrowser",
+                "killOnServerStop": true,
+                "uriFormat": "http://localhost:%s",
+                "pattern": "Server running on http://localhost:([0-9]+)"
+            },
+            "presentation": {
+                "hidden": false,
+                "group": "launch",
+                "order": 1
+            }
+        }
+    ]
+}

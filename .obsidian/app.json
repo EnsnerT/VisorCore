@@ -1,0 +1,16 @@
+{
+  "readableLineLength": false,
+  "showInlineTitle": true,
+  "showLineNumber": false,
+  "userIgnoreFilters": [
+    "asemblyscriptproject/",
+    "node_modules/",
+    "backups/",
+    "src/",
+    "dist/",
+    "public/"
+  ],
+  "openBehavior": "file:readme.md",
+  "useMarkdownLinks": true,
+  "alwaysUpdateLinks": true
+}

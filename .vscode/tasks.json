@@ -1,0 +1,20 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "start",
+			"problemMatcher": [],
+			"label": "npm start development server",
+			"detail": "concurrently \"npm run tsc:watch\" \"npm run serve\""
+		},
+		{
+			"type": "npm",
+			"script": "test",
+			"group": "test",
+			"problemMatcher": [],
+			"label": "Run Tests",
+			"detail": "npx jest"
+		}
+	]
+}

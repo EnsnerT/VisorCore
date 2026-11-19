@@ -1,0 +1,8 @@
+{
+    "files.readonlyInclude": {
+        "dist/**": true
+    },
+    "files.exclude": {
+        "asemblyscriptproject": true
+    }
+}

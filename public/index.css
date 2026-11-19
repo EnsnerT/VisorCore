@@ -1,0 +1,37 @@
+body {
+    padding: 0;
+    margin: 0;
+    background: black;
+}
+
+#container {
+    display: flex;
+    flex-direction: row;
+    height: 100dvh;
+}
+
+canvas#master {
+    /* height: 100%; */
+    /* width: 100%; */
+    /* flex-grow: 1; */
+    position: absolute;
+}
+
+#slider {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    background: #ccc;
+}
+
+#resizable {
+    flex-grow: 1;
+    position: relative;
+}
+
+#toolbox {
+    /* flex-grow: 1; */
+    width: 300px;
+    height: 100%;
+}

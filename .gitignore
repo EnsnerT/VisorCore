@@ -1,0 +1,10 @@
+dist/tests/
+backups/
+node_modules/
+package-lock.json
+asemblyscriptproject/
+assets/
+.obsidian/themes/
+.obsidian/workspace.json
+.obsidian/appearance.json
+.obsidian/templates.json

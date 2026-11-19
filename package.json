@@ -1,0 +1,39 @@
+{
+    "name": "VisorCore",
+    "version": "1.0.0",
+    "description": "A modular TypeScript framework for building visual editors with JSON-driven configuration and minimal JavaScript.",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "author": "EnsnerT (GitHub)",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/EnsnerT/VisorCore.git"
+    },
+    "scripts": {
+        "build": "webpack --mode production",
+        "test": "npx jest",
+        "tsc:watch": "tsc -w",
+        "webpack:watch": "webpack --watch",
+        "serve": "node server.js",
+        "start": "concurrently \"npm run webpack:watch\" \"npm run serve\""
+    },
+    "devDependencies": {
+        "@types/jest": "^30.0.0",
+        "@types/jsdom": "^30.0.0",
+        "concurrently": "^10.0.5",
+        "express": "^5.2.1",
+        "gh-pages": "^6.3.0",
+        "jest": "^30.5.2",
+        "jsdom": "^31.0.1",
+        "ts-jest": "^29.4.15",
+        "ts-loader": "^9.6.2",
+        "ts-node": "^10.9.2",
+        "typescript": "6.0.3",
+        "webpack": "^5.112.2",
+        "webpack-cli": "^7.3.1"
+    }
+}
