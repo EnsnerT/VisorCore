@@ -67,4 +67,3 @@ namespace KeyBinder {
 }
 
 export default KeyBinder;
-(globalThis as any).KeyBinder = KeyBinder;

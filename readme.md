@@ -26,7 +26,7 @@ More in [Todos](#Todos).
     - **Progress**: 80%
 - [Contextable](docs/Contextable.md) - Context Management Library
     - **Category**: Functionality
-    - **Progress**: 10%
+    - **Progress**: 40%
 - [Groupable](docs/Groupable.md) - Data Manipulation Library
     - **Category**: Data
     - **Progress**: 95%
@@ -64,6 +64,7 @@ More in [Todos](#Todos).
 - [ ] GitHub
 	- [x] Upload the Project to GitHub.
 	- [ ] Add Workflows (GitHub Actions) to build the Environment and Static Files.
+- [ ] NodeDrawer.md has an issue where Obsidian renders `A: \n B:` but GitHub renders it `A: B:`
 ## Importance - Low
 - NodeDrawer
     - Make Worker capable!

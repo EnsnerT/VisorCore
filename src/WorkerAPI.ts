@@ -2,7 +2,7 @@
 /// <reference lib="es2024.promise" />
 /// <reference lib="webworker" />
 // ts: target: ES5, JSX:none, Module: ES2020, declaration
-// node "C:\Users\Thomas\AppData\Roaming\npm\tsc" WorkerAPI.ts -d -m commonjs --lib webworker
+// node "%userprofile%\Roaming\npm\tsc" WorkerAPI.ts -d -m commonjs --lib webworker
 
 // @ts-ignore
 type SupportedWorkerKinds = DedicatedWorkerGlobalScope | Worker | SharedWorker;
@@ -144,7 +144,6 @@ class WorkerAPI {
 }
 
 export default WorkerAPI;
-(globalThis as any).WorkerAPI = WorkerAPI;
 
 // Unsupported actions:
 // - Transferables can not be Received back and can not be a Return Value yet!

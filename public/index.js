@@ -1,3 +1,10 @@
+/** 
+ * @file index.js 
+ * @description an Example Script to showcase the VisorCore Library
+ * @author EnsnerT (GitHub) 2026-11-20
+ * @import NodeDrawer from '../src/NodeDrawer.ts'
+ * @import Groupable from '../src/Groupable.ts' 
+ */
 /// <reference path="../src/NodeDrawer.ts" />
 /// <reference path="../src/Groupable.ts" />
 
@@ -140,12 +147,6 @@ class SimpleBoxRenderer {
     }
 }
 
-// issue: If there space between the canvas and the left top corner - 
-//  drawing at Worldspace 0,0 is visible;
-//  drawing at Screenspace 0,0 is visible;
-//  but drawing at globalspace 0,0 is impossible, since the screen is offset to the browser!
-// having 2 NodeDrawers / Rendering Instances. where both instances are at Worldpos 0,0,1 - 
-//  then the node at 0,0 should be shown on both Canvas in the top left; if one is showing it offset, then rendering is wrong!
 /* 
 _r = new Groupable(mapChunks) // make a groupable
     .groupBy(d=>(Math.floor(d[0]/100)+"_"+Math.floor(-d[1]/100))) // then group by "{x/100}_{y/100}"
@@ -153,10 +154,6 @@ _r = new Groupable(mapChunks) // make a groupable
     .ungroup()
     .get();
  */
-// holdup!
-//  worldspace is dynamic
-//  globalspace is canvas
-//  screenspace is browser... maybe?
 NodeDrawer.construct(document.querySelector("canvas#master"),{
     draggableView: true,
     draggableNodes: false,

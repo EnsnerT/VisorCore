@@ -88,30 +88,31 @@ type NodeDrawerConfig = {
 > [!note]
 > For the **Conversion** samples, we can assume, you have a NodeDrawerContext stored with `const cv=NodeDrawer('canvas').getCurrentViewport();`
 ### Screen
-**Element**: Canvas
-**Base**: Screen Space 0,0 is the Browser's Screen at 0,0
-This changes based on the Canvas location. E.g. if the canvas has an offset 100 pixels from the left screen edge, the Screen Tranformation Space is 100,0; 
-**Purpose**: The Transformation Space for the offset of Canvas and Browser/Screen;
-**Conversion**:
-- *Browser/Screen* to *Global/Canvas* Location: `cv.getScreenSpace().getInGlobalSpace(x,y)`
-- *Browser/Screen* to *World* Location: `cv.getScreenSpace().getInSpace(cv.getWorldSpace(),x,y)`
+- **Element**: Canvas
+- **Base**: Screen Space 0,0 is the Browser's Screen at 0,0
+	- This changes based on the Canvas location. E.g. if the canvas has an offset 100 pixels from the left screen edge, the Screen Tranformation Space is 100,0; 
+- **Purpose**: The Transformation Space for the offset of Canvas and Browser/Screen;
+- **Conversion**:
+	- *Browser/Screen* to *Global/Canvas* Location: `cv.getScreenSpace().getInGlobalSpace(x,y)`
+	- *Browser/Screen* to *World* Location: `cv.getScreenSpace().getInSpace(cv.getWorldSpace(),x,y)`
 ### Global
-**Element**: none (is always 0,0, with scale of 1.00)
-**Base**: Global Space 0,0 is meant to be the transformation for Canvas. ; Since the Offset for Canvas to itself is always 0,0 and the scale difference is also always 1.00 **do never modify the Global Space!**;
-**Purpose**: The Transformation Space is a Helper to convert between to and from the Canvas.
+- **Element**: none (is always 0,0, with scale of 1.00)
+- **Base**: Global Space 0,0 is meant to be the transformation for Canvas. ; Since the Offset for Canvas to itself is always 0,0 and the scale difference is also always 1.00 **do never modify the Global Space!**;
+- **Purpose**: The Transformation Space is a Helper to convert between to and from the Canvas.
+- **Conversion**:
+	- *Global* to *Browser/Screen* Location: `NodeDrawer.TransformationSpace.globalSpace.getInSpace(cv.getScreenSpace(),x,y)`
+	- *Global* to *World* Location: `NodeDrawer.TransformationSpace.globalSpace.getInSpace(cv.getWorldSpace(),x,y)`
+
 > [!info]
 > You will never encounter a situation, where you need to calculate from **globalSpace**. The Global Space is only meant as an Dummy Transformation Space.
 
-**Conversion**:
-- *Global* to *Browser/Screen* Location: `NodeDrawer.TransformationSpace.globalSpace.getInSpace(NodeDrawer('canvas').getCurrentViewport().getScreenSpace(),x,y)`
-- *Global* to *World* Location: `NodeDrawer.TransformationSpace.globalSpace.getInSpace(NodeDrawer('canvas').getCurrentViewport().getWorldSpace(),x,y)`
 ### World
-**Element**: none (virtual)
-**Base**: World Space 0,0 is the Virtual Offset from Canvas to the Simulated World. 
-**Purpose**: 0,0 in WORLD SPACE means a node starting from 0,0 is rendered in the Canvas top 0,0 Offset; and -100,-100 makes the 0,0 Node offset by 100 Units from the top left INWARDS, making the NODE appear with 100 units padding from the top and left.
-**Conversion**:
-- *World* to *Browser/Screen* Location: `cv.getWorldSpace().getInSpace(cv.getScreenSpace(),x,y)`
-- *World* to *Global/Canvas* Location: `cv.getWorldSpace().getInGlobalSpace(x,y)`
+- **Element**: none (virtual)
+- **Base**: World Space 0,0 is the Virtual Offset from Canvas to the Simulated World. 
+- **Purpose**: 0,0 in WORLD SPACE means a node starting from 0,0 is rendered in the Canvas top 0,0 Offset; and -100,-100 makes the 0,0 Node offset by 100 Units from the top left INWARDS, making the NODE appear with 100 units padding from the top and left.
+- **Conversion**:
+	- *World* to *Browser/Screen* Location: `cv.getWorldSpace().getInSpace(cv.getScreenSpace(),x,y)`
+	- *World* to *Global/Canvas* Location: `cv.getWorldSpace().getInGlobalSpace(x,y)`
 
 ### Common Uses
 - **Browser Event** in the *Virtual World*: `cv.getScreenSpace().getInSpace(cv.getWorldSpace(),eventX,eventY) => World Position`
@@ -119,10 +120,11 @@ This changes based on the Canvas location. E.g. if the canvas has an offset 100 
 - **Draw Node Location** on *Canvas*: `cv.getWorldSpace().getInGlobalSpace(worldX,worldY) => Canvas Position`
 
 # Cross Integrations
-The `Settings` Library *requires* following Libraries:
+The `NodeDrawer` Library *requires* following Libraries:
 - *unimplemented* [Contextable](docs/Contextable.md) - Provides Contexts
 - *unimplemented* [KeyBinder](docs/KeyBinder.md) - Actions based on Keyboard input.
 
+And *optional* Supports the Libraries: 
 - [NodeDrawer](docs/NodeDrawer.md) - Rendering Library (Category: UI & Controller)
 - [Contextable](docs/Contextable.md) - Context Library (Category: Controller)
 - [Groupable](docs/Groupable.md) - Data Manipulation Library (Category: Data)
@@ -130,3 +132,4 @@ The `Settings` Library *requires* following Libraries:
 - [MenuBuilder](docs/MenuBuilder.md) - UI Library (Category: UI)
 - [Settings](docs/Settings.md) - Dynamic Configuration Modification Handler Library (Category: UI, Data & Controller)
 # Todos
+- Worker Rendering

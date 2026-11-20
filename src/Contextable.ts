@@ -1,22 +1,27 @@
-function check(ctx: Contextable.ContextTester | Contextable.ContextDecider, args?: string): string | boolean {
-    if (typeof ctx === 'function')
-        return ctx(args);
-    else
-        return ctx.test(args);
-}
-
 class Contextable {
+
+    static check(ctx: Contextable.ContextTester | Contextable.ContextDecider, args?: string): string | boolean {
+        if (typeof ctx === 'function')
+            return ctx(args);
+        else
+            return ctx.test(args);
+    }
+
     // private 
     private static _contexts: Map<string, Contextable.ContextDecider | Contextable.ContextTester> = new Map();
 
     public static test(id: string, args?: string): boolean | string | number {
         // Check if the context ID is registered and return its state
         const context = this._contexts.get(id);
-        return context ? check(context, args) : false;
+        return context ? Contextable.check(context, args) : false;
     }
 
     public static resetRegister() {
         this._contexts.clear();
+    }
+
+    public static unregisterContext(id: string): void {
+        this._contexts.delete(id);
     }
 
     public static registerContext(id: string, decider: Contextable.ContextDecider | Contextable.ContextTester): void {
@@ -129,12 +134,12 @@ namespace Contextable {
         }
 
         refresh(): void {
-            this.last_state = check(this.child, this.cached_args);
+            this.last_state = Contextable.check(this.child, this.cached_args);
         }
 
         test(args?: string): string | boolean {
             if (this.last_state == undefined || this.cached_args !== args) {
-                this.last_state = check(this.child, args);
+                this.last_state = Contextable.check(this.child, args);
                 this.cached_args = args;
             }
             return this.last_state;
@@ -146,7 +151,7 @@ namespace Contextable {
         /**
          * Depending on <code>this.type</code>, each <code>this.childs</code> is describing the handling.
          */
-        private type: "and" | "or" | "not" | "comparison" | "literal" = "or";
+        private type: "and" | "or" | "not" | "comparison" = "or";
         /**
          * type <code>string</code>, if starting with <literal>'</literal> then the string is a literal type, otherwise the type is context; contexts can be evaluated using <code>Contextable.test(contextId)</code>
          * otherwise it can only be type <code>ContextExpression</code>.
@@ -163,16 +168,87 @@ namespace Contextable {
                 this.childs = [expressions];
         }
 
-        public evaluate() {
-            // @AI: sample implementation
-            for (const instance of this.childs) {
-                if (typeof instance === 'string') {
-                    const contextValue = Contextable.test(instance);
-                    if (typeof contextValue === 'boolean') {
-                        return contextValue;
-                    }
+        public inspect(): typeof this {
+            console.log(this.asJson());
+            return this;
+        }
+
+        public asJson(): string {
+            const _childs = [];
+            for (const _child of this.childs) {
+                if (typeof _child === 'string') {
+                    _childs.push(_child);
+                } else {
+                    _childs.push(_child.asJson());
                 }
             }
+            return 'CE{type:\'' + this.type + '\',childs:[' + _childs.join(',') + ']}';
+        }
+
+        public evaluate(): boolean {
+            // @AI: this is just an Example implementation and can be enhanced later.
+            if (this.type === 'and' || this.type === 'or') {
+                var combination = [];
+                for (const instance of this.childs) {
+                    let value = false;
+                    if (typeof instance === 'string') {
+                        value = (!!Contextable.test(instance));
+                    } else {
+                        value = (instance.evaluate());
+                    }
+                    if (this.type === 'or' && !!value)
+                        return true;
+                    else if (this.type === 'and' && !value)
+                        return false;
+                }
+            } else if (this.type === 'not') {
+                if (this.childs.length !== 1) {
+                    throw new Error("CE invalid Invert Structure!");
+                }
+                if (typeof this.childs[0] === 'string') {
+                    return !Contextable.test(this.childs[0]);
+                } else {
+                    return !this.childs[0].evaluate();
+                }
+            } else if (this.type === 'comparison') {
+                // here i expect exactly 3 or more childs
+                if (this.childs.length == 1 && typeof this.childs[0] !== 'string') {
+                    return this.childs[0].evaluate();
+                }
+                if (this.childs.length < 2) {
+                    throw new Error('CE invalid Comparison Structure!');
+                }
+                var values = [];
+                const comparisonType = this.childs[1];
+                for (var i = 0; i < this.childs.length; i++) {
+                    if (i == 1) { continue; }
+                    const instance = this.childs[i];
+                    if (typeof instance === 'string') {
+                        if ((instance.startsWith('\'') && instance.endsWith('\'')) || (instance.startsWith('\"') && instance.endsWith('\"'))) {
+                            values.push(instance.substring(1, instance.length - 1));
+                        } else {
+                            values.push(Contextable.test(instance));
+                        }
+                    } else {
+                        values.push(instance.evaluate());
+                    }
+                }
+                if (comparisonType === '==' || comparisonType === '===') {
+                    // expectation : 3 values
+                    if (values.length < 2)
+                        throw new Error("CE invalid equals Comparison!");
+                    // console.debug(values);
+                    return values[0] == values[1];
+                } else if (comparisonType === '!=' || comparisonType === '!==') {
+                    // expectation : 3 values
+                    if (values.length < 2)
+                        throw new Error("CE invalid equals Comparison!");
+                    // console.debug(values);
+                    return values[0] != values[1];
+                }
+            }
+            console.warn("Warning there was no option for evaluate in ContextExpression! Falling back to 'false' to prevent issues.")
+            return false; // fallback
         }
 
         /**
@@ -181,83 +257,70 @@ namespace Contextable {
          * Builds an expression tree for evaluation.
          * Example: 'context1 && context2 || !context3' builds to ContextExpression 
          */
+        // public static parse(expression: string): ContextExpression {
+        // }
         public static parse(expression: string): ContextExpression {
-            let index = 0;
-            const result = this.parseOr(expression, index);
-            // Check if the entire expression was consumed
-            if (result.index < expression.length) {
-                console.debug(result.expression);
-                throw new Error('Unexpected characters at the end of the expression, index:' + result.index + ', length:' + expression.length);
-            }
-            return result.expression;
-        }
+            const tokens = expression.split(/(\s*&&\s*|\s*\|\|\s*|\s*!\s*|\s*===?\s*|\s*!==?\s*|\(|\))/).filter(token => token.trim() !== '');
+            const stack: (ContextExpression | string)[] = [];
+            let currentType: "and" | "or" | "not" | "comparison" | "literal" = "or";
+            const operatorStack: ("and" | "or" | "not")[] = [];
 
-        private static parseOr(expression: string, index: number): { expression: ContextExpression, index: number } {
-            let left = this.parseAnd(expression, index);
-            index = left.index;
-            while (index + 1 < expression.length && expression[index] === '|' && expression[index + 1] === '|') {
-                index += 2;
-                // Skip whitespace
-                while (index < expression.length && expression[index] === ' ') {
-                    index++;
-                }
-                const right = this.parseAnd(expression, index);
-                index = right.index;
-                left.expression = new ContextExpression('or', [left.expression, right.expression]);
-            }
-            return { expression: left.expression, index: index };
-        }
-
-        private static parseAnd(expression: string, index: number): { expression: ContextExpression, index: number } {
-            let left = this.parsePrimary(expression, index);
-            index = left.index;
-            while (index + 1 < expression.length && expression[index] === '&' && expression[index + 1] === '&') {
-                index += 2;
-                // Skip whitespace
-                while (index < expression.length && expression[index] === ' ') {
-                    index++;
-                }
-                const right = this.parsePrimary(expression, index);
-                index = right.index;
-                left.expression = new ContextExpression('and', [left.expression, right.expression]);
-            }
-            return { expression: left.expression, index: index };
-        }
-
-        private static parsePrimary(expression: string, index: number): { expression: ContextExpression, index: number } {
-            // Skip whitespace
-            while (index < expression.length && expression[index] === ' ') {
-                index++;
-            }
-            if (index < expression.length && expression[index] === '(') {
-                index++;
-                const result = this.parseOr(expression, index);
-                index = result.index;
-                // Skip whitespace
-                while (index < expression.length && expression[index] === ' ') {
-                    index++;
-                }
-                if (index < expression.length && expression[index] === ')') {
-                    index++;
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                if (token === '&&') {
+                    while (operatorStack.length > 0 && operatorStack[operatorStack.length - 1] === 'and') {
+                        const op = operatorStack.pop();
+                        const right = stack.pop();
+                        const left = stack.pop();
+                        stack.push(new ContextExpression(op!, [left!, right!]));
+                    }
+                    operatorStack.push('and');
+                } else if (token === '||') {
+                    while (operatorStack.length > 0 && operatorStack[operatorStack.length - 1] !== 'not') {
+                        const op = operatorStack.pop();
+                        const right = stack.pop();
+                        const left = stack.pop();
+                        stack.push(new ContextExpression(op!, [left!, right!]));
+                    }
+                    operatorStack.push('or');
+                } else if (token === '!') {
+                    operatorStack.push('not');
+                } else if (token === '==' || token === '!=' || token === '===' || token === '!==') {
+                    currentType = 'comparison';
+                    const left = stack.pop();
+                    const right = tokens[++i];
+                    stack.push(new ContextExpression(currentType!, [left!, token!, right!]));
+                } else if (token === '(') {
+                    // Find matching closing parenthesis
+                    let depth = 1;
+                    let j = i + 1;
+                    while (j < tokens.length && depth > 0) {
+                        if (tokens[j] === '(') depth++;
+                        else if (tokens[j] === ')') depth--;
+                        j++;
+                    }
+                    const subTokens = tokens.slice(i + 1, j - 1);
+                    const subExpression = this.parse(subTokens.join(''));
+                    stack.push(subExpression);
+                    // Move i to the closing parenthesis
+                    i = j - 1;
+                } else if (token === ')') {
+                    break;
                 } else {
-                    throw new Error('Expected closing parenthesis');
+                    stack.push(token);
                 }
-                return { expression: result.expression, index };
-            } else if (index < expression.length && this.isIdentifierChar(expression[index])) {
-                const identifier = this.parseIdentifier(expression, index);
-                return { expression: new ContextExpression('literal', identifier.content), index: identifier.index };
-            } else {
-                throw new Error('Unexpected character');
             }
-        }
 
-        private static parseIdentifier(expression: string, index: number): { content: string, index: number } {
-            let identifier = '';
-            while (index < expression.length && this.isIdentifierChar(expression[index])) {
-                identifier += expression[index];
-                index++;
+            while (operatorStack.length > 0) {
+                const op = operatorStack.pop();
+                const right = stack.pop();
+                const left = stack.pop();
+                stack.push(new ContextExpression(op!, [left!, right!]));
             }
-            return { content: identifier, index: index + 1 };
+
+            // Reset currentType to 'or' if no explicit type was set
+            const finalType = stack.length > 0 ? (stack[0] instanceof ContextExpression ? stack[0].type : 'or') : 'or';
+            return new ContextExpression(finalType, stack);
         }
 
         private static isIdentifierChar(char: string): boolean {
@@ -275,7 +338,4 @@ namespace Contextable {
 // - settings (future implementation): a "CachedDecision" is beeing fed by the value and "refresh" is called from settings manipulation.
 // - focus / hover / click and other events : either a LatchedDescition or a 
 
-
-
 export default Contextable;
-(globalThis as any).Contextable = Contextable;

@@ -121,5 +121,4 @@ namespace MenuBuilder {
 }
 
 export default MenuBuilder;
-(globalThis as any).MenuBuilder = MenuBuilder;
 // undeclared API!

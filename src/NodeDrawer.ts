@@ -156,6 +156,10 @@ namespace NodeDrawer {
 
         getCurrentViewport(): Viewport<T>;
 
+        getPositionInWorld(pos: Point): Point;
+        getPositionInWorld(pos: Point, offset: Partial<Point>): Point;
+        getPositionInWorld(pos: Point, offset?: Partial<Point>): Point;
+
         mapOntoNode(node: NodeDrawer.Node): Collisions2D.BoundingBox;
     }
 
@@ -1089,9 +1093,9 @@ namespace NodeDrawer {
             const ctx = context.context();
             if ("fill" in ctx) {
                 ctx.beginPath();
-                const location = context.mapOntoNode(node).round(0,undefined);
+                const location = context.mapOntoNode(node).round(0, undefined);
                 ctx.fillStyle = "#ff00ff";
-                ctx.fillRect(location.x,location.y,location.mx,location.my);
+                ctx.fillRect(location.x, location.y, location.mx, location.my);
             }
         }
     }
@@ -1375,4 +1379,3 @@ namespace NodeDrawer {
 }
 
 export default NodeDrawer;
-(globalThis as any).NodeDrawer = NodeDrawer;

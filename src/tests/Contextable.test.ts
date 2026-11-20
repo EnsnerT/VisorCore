@@ -1,4 +1,3 @@
-// const Contextable = 
 import Contextable from "../Contextable";
 
 describe('Contextable / Evaluation', function () {
@@ -26,7 +25,7 @@ describe('Contextable / Evaluation', function () {
     });
     it('handle "Paranthesis"', function () {
         expect(Contextable.parseExpression("'bravo'=='bravo'").evaluate()).toBe(true);
-        expect(Contextable.parseExpression("('bravo'=='bravo')").evaluate()).toBe(true);
+        expect(Contextable.parseExpression("('bravo'=='bravo')").inspect().evaluate()).toBe(true);
     });
 });
 describe('Contextable / Decider', function () {

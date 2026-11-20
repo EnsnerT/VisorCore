@@ -528,4 +528,3 @@ class Groupable<T> {
 }
 
 export default Groupable;
-(globalThis as any).Groupable = Groupable;
