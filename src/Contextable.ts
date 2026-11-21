@@ -1,19 +1,41 @@
-class Contextable {
-
-    static check(ctx: Contextable.ContextTester | Contextable.ContextDecider, args?: string): string | boolean {
-        if (typeof ctx === 'function')
-            return ctx(args);
-        else
-            return ctx.test(args);
+export namespace Utility {
+    export function arr_dropindex<T>(arr: T[], index: number): T[] {
+        if (arr.length - 1 < index) {
+            throw new RangeError("index " + index + " out of range for array[n=" + (arr.length - 1) + "]");
+        } else if (arr.length - 1 == index) {
+            arr.pop();
+        } else if (arr.length > 1) {
+            arr[index] = arr.pop()!;
+        }
+        return arr;
     }
+}
 
-    // private 
-    private static _contexts: Map<string, Contextable.ContextDecider | Contextable.ContextTester> = new Map();
+function check<T extends string | boolean>(ctx: Contextable.ContextTester<T> | Contextable.StateChangeListeners<T>, args?: string): T {
+    if (typeof ctx === 'function')
+        return ctx(args);
+    else
+        return ctx.test(args);
+}
+
+class Contextable {
+    private static _contexts: Map<string, Contextable.StateChangeListeners<any> | Contextable.ContextTester<any>> = new Map();
 
     public static test(id: string, args?: string): boolean | string | number {
         // Check if the context ID is registered and return its state
         const context = this._contexts.get(id);
-        return context ? Contextable.check(context, args) : false;
+        return context ? check(context, args) : false;
+    }
+
+    public static resolve(id: string, args?: string): { refreshAutomatic: true, listener: Contextable.StateChangeListeners<string | boolean> } | { refreshAutomatic: false, listener: Contextable.ContextTester<string | boolean> } | undefined {
+        const instance = this._contexts.get(id);
+        if (typeof instance === 'undefined') {
+            return undefined;
+        } else if (typeof instance === 'function') {
+            return { refreshAutomatic: false, listener: instance };
+        } else {
+            return { refreshAutomatic: true, listener: instance };
+        }
     }
 
     public static resetRegister() {
@@ -24,24 +46,56 @@ class Contextable {
         this._contexts.delete(id);
     }
 
-    public static registerContext(id: string, decider: Contextable.ContextDecider | Contextable.ContextTester): void {
+    public static registerContext<T extends string | boolean>(id: string, decider: Contextable.StateChangeListeners<T> | Contextable.ContextTester<T>): void {
         this._contexts.set(id, decider);
     }
 
     public static parseExpression(expression: string): Contextable.ContextExpression {
         return Contextable.ContextExpression.parse(expression);
     }
+
+    public static createContextCallback<T extends string | boolean>(id: string, callback: Contextable.ContextTester<T>): void {
+        this._contexts.set(id, callback);
+    }
+
+    public static createContext<T extends string | boolean>(id: string, type: "radio", defaultValue: T): Contextable.RadioDecision<T>;
+    public static createContext(id: string, type: "latched", defaultValue: boolean): Contextable.LatchedDecision;
+    public static createContext<T extends string | boolean>(id: string, type: "listener", defaultValue: T): Contextable.StateChangeListeners<T>;
+    public static createContext(id: string, type: string, defaultValue: string | boolean): Contextable.ContextDecider<string | boolean> {
+        if (this._contexts.has(id)) {
+            const value = this._contexts.get(id)!;
+            if (typeof value !== 'function' && value.type() === type)
+                return value as any; // keep 
+        }
+        var instance;
+        if (type === "radio") {
+            instance = new Contextable.RadioDecision(defaultValue);
+            this._contexts.set(id, instance);
+            return instance;
+        } else if (type === "latched") {
+            instance = new Contextable.LatchedDecision(!!defaultValue);
+            this._contexts.set(id, instance);
+            return instance;
+        } else if (type === "listener") {
+            instance = new Contextable.StateChangeListeners<typeof defaultValue>(defaultValue);
+            this._contexts.set(id, instance);
+            return instance;
+        }
+
+        return {} as any;
+    }
 }
 
 namespace Contextable {
-    export type ContextTester = (args?: string) => string | boolean;
-    export interface ContextDecider {
-        test(args?: string): string | boolean;
+    export type ContextTester<T> = (args?: string) => T;
+    export interface ContextDecider<T extends string | boolean> {
+        test(args?: string): T;
+        type(): string;
     }
 
     type ChangeListener<T> = (new_value: T, unhook: () => void) => void;
 
-    export class StateChangeListeners<T> {
+    export class StateChangeListeners<T extends string | boolean> implements ContextDecider<T> {
         private static uid: number = 1;
         private value: T;
         constructor(initial_value: T) {
@@ -68,6 +122,25 @@ namespace Contextable {
             }
         }
 
+        unlisten(): typeof this;
+        unlisten(id: number): typeof this;
+        unlisten(id?: number | undefined): typeof this {
+            if (typeof id === 'number') {
+                delete this.listeners[id];
+            } else {
+                for (const key in this.listeners){
+                    delete this.listeners[key];
+                }
+            }
+            return this;
+        }
+
+        test(): T;
+        test(args: string | undefined): T;
+        test(args?: string | undefined): T {
+            return this.value;
+        }
+
         change(new_value: T): T {
             const oldValue = this.value;
             this.value = new_value;
@@ -80,69 +153,79 @@ namespace Contextable {
             }
             return oldValue;
         }
+
+        type(): string {
+            return "statechangelistner";
+        }
     }
 
-    export class RadioDecision {
-        private state: string = "";
+    export class RadioDecision<T extends string | boolean> extends StateChangeListeners<T> {
+        private _states: Map<T, ContextDecider<boolean>> = new Map();
 
-        constructor();
-        constructor(initial_state: string);
-        constructor(initial_state?: string) {
-            if (typeof initial_state === "string") {
-                this.state = initial_state;
-            }
-        }
-
-        public create(expected_state: string): ContextDecider {
+        public create(expected_state: T): ContextDecider<boolean> {
             const self = this;
-            return {
-                test(): boolean {
-                    return self.state === expected_state;
-                }
-            }
+            if (this._states.has(expected_state))
+                return this._states.get(expected_state)!;
+
+            const instance: ContextDecider<boolean> = {
+                test(args?: string | undefined): boolean {
+                    return self.test(args) === expected_state;
+                },
+                type(): string {
+                    return "radio_child";
+                },
+            };
+            this._states.set(expected_state, instance);
+            return instance;
         }
 
-        public setState(next_state: string): void {
-            this.state = next_state;
+        public setState(next_state: T): void {
+            this.change(next_state);
         }
 
+        type(): string {
+            return "radio";
+        }
     }
 
-    export class LatchedDecision implements ContextDecider {
-        private state: boolean;
-
-        constructor(initial_state: boolean) {
-            this.state = initial_state;
-        }
+    export class LatchedDecision extends StateChangeListeners<boolean> {
         on(): void {
-            this.state = true;
+            this.change(true);
         }
         off(): void {
-            this.state = false;
+            this.change(false);
         }
-        public test(): boolean {
-            return this.state;
+        type(): string {
+            return "latched";
         }
     }
 
-    export class CachedDecision implements ContextDecider {
-        private child: ContextDecider | ContextTester;
-        private last_state: string | boolean | undefined;
+    /**
+     * @deprecated
+     * @description API usage unknown...
+     */
+    export class CachedDecision<T extends string | boolean> implements ContextDecider<T> {
+        private child: StateChangeListeners<T> | ContextTester<T>;
+        private last_state: T | undefined;
         private cached_args?: string;
         constructor(child: typeof this.child) {
             this.child = child;
         }
 
         refresh(): void {
-            this.last_state = Contextable.check(this.child, this.cached_args);
+            this.last_state = check(this.child, this.cached_args);
         }
 
-        test(args?: string): string | boolean {
+        test(args?: string): T {
             if (this.last_state == undefined || this.cached_args !== args) {
-                this.last_state = Contextable.check(this.child, args);
+                this.last_state = check(this.child, args);
                 this.cached_args = args;
             }
             return this.last_state;
+        }
+
+        type(): string {
+            return "cached";
         }
     }
 
@@ -168,6 +251,83 @@ namespace Contextable {
                 this.childs = [expressions];
         }
 
+        private listeners: ChangeListener<boolean>[] = [];
+        /** autodependency means all dependencies are "listeners" or "constants" */
+        private autodependency: boolean = false;
+        private dependencies: Contextable.StateChangeListeners<any>[] | undefined = undefined;
+
+        private triggerDependencyUpdate(value: any, unhook: () => void) {
+            var removeable: number[] = [];
+            const newValue = this.evaluate();
+            for (var i = 0; i < this.listeners.length; i++) {
+                const listener = this.listeners[i];
+                var remove = false;
+                listener(newValue, function () { remove = true; });
+                if (remove)
+                    removeable.push(i);
+            }
+            while (removeable.length) {
+                Utility.arr_dropindex(this.listeners, removeable.shift()!);
+            }
+        }
+
+        private calculateDependencyList() {
+            if (this.dependencies === undefined) {
+                this.dependencies = [];
+                // make a flat childs list.
+                var unprocessedChilds: typeof this.childs = [];
+                unprocessedChilds.push(...this.childs);
+                var item: string | ContextExpression | undefined;
+                this.autodependency = !!unprocessedChilds.length;
+                while (unprocessedChilds.length) {
+                    item = unprocessedChilds.shift();
+                    if (typeof item === 'string') {
+                        if (item.startsWith("'") || item.startsWith("'"))
+                            continue;
+                        if (item in ['==', '===', '!=', '!=='])
+                            continue;
+                        var ref = Contextable.resolve(item);
+                        if (ref) {
+                            if (!ref.refreshAutomatic) {
+                                this.autodependency = false;
+                                break;
+                            } else {
+                                this.dependencies.push(ref.listener);
+                            }
+                        } else {
+                            // this is unknown how to handle
+                            console.warn("Unknown context handle for '" + item + "'. Make sure all Contexts are registered before Evaluating them.");
+                            this.autodependency = false;
+                            break;
+                        }
+                    } else if (typeof item === 'undefined') {
+                        continue;
+                    } else {
+                        unprocessedChilds.push(...item.childs);
+                    }
+                }
+                if (this.autodependency) {
+                    // all dependency are listenable. therefore this ContextExpression can be automatically managed!
+                    for (const dep of this.dependencies) {
+                        dep.listen(this.triggerDependencyUpdate.bind(this));
+                    }
+                }
+            }
+        }
+
+        public listen(listener: ChangeListener<boolean>): typeof this {
+            this.calculateDependencyList();
+            this.listeners.push(listener);
+            return this;
+        }
+
+        public unlisten(): typeof this {
+            while (this.listeners.length) {
+                this.listeners.shift();
+            }
+            return this;
+        }
+
         public inspect(): typeof this {
             console.log(this.asJson());
             return this;
@@ -186,7 +346,6 @@ namespace Contextable {
         }
 
         public evaluate(): boolean {
-            // @AI: this is just an Example implementation and can be enhanced later.
             if (this.type === 'and' || this.type === 'or') {
                 var combination = [];
                 for (const instance of this.childs) {

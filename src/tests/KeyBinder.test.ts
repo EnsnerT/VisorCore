@@ -2,7 +2,6 @@ import KeyBinder from '../KeyBinder';
 import { JSDOM } from 'jsdom';
 
 describe('KeyBinder / Action', function () {
-    // test()
 });
 describe('KeyBinder / Events', function () {
 
